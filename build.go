@@ -10,6 +10,10 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	defaultBuildNinjaFilename = "build.ninja"
+)
+
 func Build(ctx context.Context, c client.Client) (*client.Result, error) {
 	buildFile, err := getBuildFile(c)
 	if err != nil {
@@ -23,18 +27,18 @@ func getBuildFile(c client.Client) ([]byte, error) {
 	opts := c.BuildOpts().Opts
 	filename := opts["filename"]
 	if filename == "" {
-		filename = "build.ninja"
+		filename = defaultBuildNinjaFilename
 	}
 
-	name := "load build.ninja"
-	if filename != "build.ninja" {
+	name := "load " + defaultBuildNinjaFilename
+	if filename != defaultBuildNinjaFilename {
 		name += " from " + filename
 	}
 
 	src := llb.Local("dockerfile",
 		llb.IncludePatterns([]string{filename}),
 		llb.SessionID(c.BuildOpts().SessionID),
-		llb.SharedKeyHint("build.ninja"),
+		llb.SharedKeyHint(defaultBuildNinjaFilename),
 		llb.WithCustomName("[internal] "+name),
 	)
 

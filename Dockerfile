@@ -5,7 +5,7 @@ RUN apk add -U git
 WORKDIR /work
 ENV GO111MODULE=on
 COPY cmd cmd
-COPY *.go go.* .
+COPY *.go go.* ./
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache \
 	CGO_ENABLED=0 go build --ldflags '-extldflags "-static"' -o /buildkit-ninja ./cmd/buildkit-ninja

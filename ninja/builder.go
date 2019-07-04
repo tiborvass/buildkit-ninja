@@ -147,6 +147,11 @@ func NewBuilder(cfg *config.Config) (*Builder, error) {
 				return nil, fmt.Errorf("could not set default build edge to unreachable '%s'%s", def, extra)
 			}
 		}
+	} else {
+		b.defaults = make(map[*edge]struct{}, len(b.edges))
+		for _, e := range b.edges {
+			b.defaults[e] = struct{}{}
+		}
 	}
 
 	return b, nil

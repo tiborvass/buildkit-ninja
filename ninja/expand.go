@@ -13,6 +13,15 @@ func expand(scope scope, s string) string {
 	for i := 0; i < len(s); i++ {
 		switch ch := s[i]; ch {
 		case '$':
+			if openBrace {
+				panic("invalid '$' inside variable name")
+			}
+			if inVariableName {
+				v, _ := scope.get(s[j:i])
+				sb.WriteString(v)
+				inVariableName = false
+				j = i
+			}
 			foundDollar = true
 			sb.WriteString(s[j:i])
 			i++ // check character after '$'
@@ -38,7 +47,7 @@ func expand(scope scope, s string) string {
 				v, _ := scope.get(s[j:i])
 				sb.WriteString(v)
 				openBrace = false
-				j = i
+				j = i + 1
 			}
 		default:
 			if inVariableName {

@@ -1,23 +1,23 @@
-package ninja
+package ninja2llb
 
 import (
 	"testing"
 
-	"github.com/tiborvass/buildkit-ninja/ninja/config"
+	"github.com/tiborvass/buildkit-ninja/ninja"
 )
 
 func TestBuilder(t *testing.T) {
-	cfg := &config.Config{
-		Vars: config.Vars{
+	cfg := &ninja.Config{
+		Vars: ninja.Vars{
 			"cc":     "gcc",
 			"cflags": "-Wall",
 			"obj":    "hello.o",
 		},
-		Rules: config.Rules{
+		Rules: ninja.Rules{
 			"compile": {Command: "$cc $cflags -c $in -o $out"},
 			"link":    {Command: "$cc $in -o $out"},
 		},
-		BuildEdges: config.BuildEdges{
+		BuildEdges: ninja.BuildEdges{
 			{
 				RuleName: "compile",
 				Inputs:   []string{"hello.c"},
@@ -32,7 +32,7 @@ func TestBuilder(t *testing.T) {
 		Defaults: []string{"hello"},
 	}
 
-	b, err := NewBuilder(cfg)
+	b, err := newBuilder(cfg)
 	if err != nil {
 		t.Fatal(err)
 	}

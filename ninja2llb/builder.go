@@ -1,11 +1,11 @@
-package ninja
+package ninja2llb
 
 import (
 	"fmt"
 	"reflect"
 	"strings"
 
-	"github.com/tiborvass/buildkit-ninja/ninja/config"
+	"github.com/tiborvass/buildkit-ninja/ninja"
 )
 
 type scope interface {
@@ -71,14 +71,14 @@ func (e *edge) get(k string) (string, bool) {
 	return e.parent.get(k)
 }
 
-type Builder struct {
+type builder struct {
 	vars     vars
 	rules    map[string]*rule
 	defaults map[*edge]struct{}
 	edges    map[string]*edge
 }
 
-func (b *Builder) CommandFor(output string) (string, error) {
+func (b *builder) CommandFor(output string) (string, error) {
 	e := b.edges[output]
 	if e == nil {
 		return "", fmt.Errorf("build edge '%s' not found", output)
@@ -90,8 +90,8 @@ func (b *Builder) CommandFor(output string) (string, error) {
 	return expand(e, cmd), nil
 }
 
-func NewBuilder(cfg *config.Config) (*Builder, error) {
-	b := &Builder{
+func newBuilder(cfg *ninja.Config) (*builder, error) {
+	b := &builder{
 		vars:     vars(cfg.Vars),
 		rules:    make(map[string]*rule, len(cfg.Rules)),
 		edges:    make(map[string]*edge, len(cfg.BuildEdges)),

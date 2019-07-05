@@ -1,4 +1,4 @@
-package ninja
+package ninja2llb
 
 import "testing"
 

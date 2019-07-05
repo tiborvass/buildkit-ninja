@@ -1,5 +1,5 @@
 /*
-Package config defines types and functions to deal with Ninja configurations.
+Package ninja defines types and functions to deal with Ninja configurations.
 
 	c := &Config{
 		Vars: map[string]string{
@@ -47,7 +47,7 @@ Package config defines types and functions to deal with Ninja configurations.
 	}
 
 */
-package config
+package ninja
 
 type Vars map[string]string
 type Rules map[string]*Rule

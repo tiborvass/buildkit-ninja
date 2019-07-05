@@ -9,13 +9,12 @@ import (
 	"github.com/moby/buildkit/util/system"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/tiborvass/buildkit-ninja/ninja"
-	"github.com/tiborvass/buildkit-ninja/ninja/config"
 )
 
-func Ninja2LLB(cfg *config.Config) (llb.State, *v1.Image, error) {
+func Ninja2LLB(cfg *ninja.Config) (llb.State, *v1.Image, error) {
 	st := llb.Image("gcc")
 
-	b, err := ninja.NewBuilder(cfg)
+	b, err := newBuilder(cfg)
 	if err != nil {
 		return st, nil, err
 	}

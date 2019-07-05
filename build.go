@@ -10,7 +10,7 @@ import (
 	"github.com/moby/buildkit/exporter/containerimage/exptypes"
 	"github.com/moby/buildkit/frontend/gateway/client"
 	"github.com/pkg/errors"
-	"github.com/tiborvass/buildkit-ninja/ninja/config"
+	"github.com/tiborvass/buildkit-ninja/ninja"
 	"github.com/tiborvass/buildkit-ninja/ninja2llb"
 )
 
@@ -56,7 +56,7 @@ func Build(ctx context.Context, c client.Client) (*client.Result, error) {
 	return res, nil
 }
 
-func getNinjaConfig(ctx context.Context, c client.Client) (*config.Config, error) {
+func getNinjaConfig(ctx context.Context, c client.Client) (*ninja.Config, error) {
 	opts := c.BuildOpts().Opts
 	filename := opts["filename"]
 	if filename == "" {
@@ -104,17 +104,17 @@ func getNinjaConfig(ctx context.Context, c client.Client) (*config.Config, error
 	//return ninja.Parse(buildFile)
 	_ = buildFile
 	// TODO: use an actual ninja parser, in the meantime hardcode a config
-	return &config.Config{
-		Vars: config.Vars{
+	return &ninja.Config{
+		Vars: ninja.Vars{
 			"cc":     "gcc",
 			"cflags": "-Wall",
 			"obj":    "hello.o",
 		},
-		Rules: config.Rules{
+		Rules: ninja.Rules{
 			"compile": {Command: "$cc $cflags -c $in -o $out"},
 			"link":    {Command: "$cc $in -o $out"},
 		},
-		BuildEdges: config.BuildEdges{
+		BuildEdges: ninja.BuildEdges{
 			{
 				RuleName: "compile",
 				Inputs:   []string{"hello.c"},

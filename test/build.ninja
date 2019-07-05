@@ -11,6 +11,7 @@ rule link
   command = $cc  $in -o $out
 
 build hello.o: compile hello.c
-build hello: link hello.o
+build main.o: compile main.c
+build hello: link hello.o main.o
 
 default hello

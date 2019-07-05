@@ -90,8 +90,13 @@ func getNinjaConfig(ctx context.Context, c client.Client) (*config.Config, error
 				Outputs:  []string{"$obj"},
 			},
 			{
+				RuleName: "compile",
+				Inputs:   []string{"main.c"},
+				Outputs:  []string{"main.o"},
+			},
+			{
 				RuleName: "link",
-				Inputs:   []string{"hello.o"},
+				Inputs:   []string{"hello.o", "main.o"},
 				Outputs:  []string{"hello"},
 			},
 		},

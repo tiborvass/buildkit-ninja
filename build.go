@@ -2,13 +2,16 @@ package bkninja
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"os"
 
+	"github.com/containerd/containerd/platforms"
 	"github.com/moby/buildkit/client/llb"
+	"github.com/moby/buildkit/exporter/containerimage/exptypes"
 	"github.com/moby/buildkit/frontend/gateway/client"
 	"github.com/pkg/errors"
 	"github.com/tiborvass/buildkit-ninja/ninja/config"
+	"github.com/tiborvass/buildkit-ninja/ninja2llb"
 )
 
 const (
@@ -16,14 +19,41 @@ const (
 )
 
 func Build(ctx context.Context, c client.Client) (*client.Result, error) {
-	ninjaCfg, err := getNinjaConfig(ctx, c)
+	cfg, err := getNinjaConfig(ctx, c)
 	if err != nil {
 		return nil, err
 	}
 
-	fmt.Fprintln(os.Stderr, ninjaCfg)
+	st, img, err := ninja2llb.Ninja2LLB(cfg)
+	if err != nil {
+		return nil, err
+	}
 
-	return nil, errors.New("TODO: not implemented!")
+	def, err := st.Marshal()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to marshal local source")
+	}
+	res, err := c.Solve(ctx, client.SolveRequest{
+		Definition: def.ToPB(),
+	})
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to resolve dockerfile")
+	}
+	ref, err := res.SingleRef()
+	if err != nil {
+		return nil, err
+	}
+
+	config, err := json.Marshal(img)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to marshal image config")
+	}
+	k := platforms.Format(platforms.DefaultSpec())
+
+	res.AddMeta(fmt.Sprintf("%s/%s", exptypes.ExporterImageConfigKey, k), config)
+	res.SetRef(ref)
+
+	return res, nil
 }
 
 func getNinjaConfig(ctx context.Context, c client.Client) (*config.Config, error) {
@@ -73,6 +103,7 @@ func getNinjaConfig(ctx context.Context, c client.Client) (*config.Config, error
 
 	//return ninja.Parse(buildFile)
 	_ = buildFile
+	// TODO: use an actual ninja parser, in the meantime hardcode a config
 	return &config.Config{
 		Vars: config.Vars{
 			"cc":     "gcc",

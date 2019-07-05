@@ -6,6 +6,7 @@ WORKDIR /work
 ENV GO111MODULE=on
 COPY cmd cmd
 COPY ninja ninja
+COPY ninja2llb ninja2llb
 COPY *.go go.* ./
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache \

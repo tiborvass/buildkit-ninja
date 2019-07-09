@@ -4,13 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/containerd/containerd/platforms"
 	"github.com/moby/buildkit/client/llb"
 	"github.com/moby/buildkit/exporter/containerimage/exptypes"
 	"github.com/moby/buildkit/frontend/gateway/client"
 	"github.com/pkg/errors"
-	"github.com/tiborvass/buildkit-ninja/ninja"
 	"github.com/tiborvass/buildkit-ninja/ninja2llb"
 )
 
@@ -24,7 +24,13 @@ func Build(ctx context.Context, c client.Client) (*client.Result, error) {
 		return nil, err
 	}
 
-	st, img, err := ninja2llb.Ninja2LLB(cfg)
+	src := llb.Local("context",
+		llb.SessionID(c.BuildOpts().SessionID),
+		llb.SharedKeyHint("context"),
+		llb.WithCustomName("[internal] load build context"),
+	)
+
+	st, img, err := ninja2llb.Ninja2LLB(cfg, src, llb.Image("gcc"))
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +62,7 @@ func Build(ctx context.Context, c client.Client) (*client.Result, error) {
 	return res, nil
 }
 
-func getNinjaConfig(ctx context.Context, c client.Client) (*ninja.Config, error) {
+func getNinjaConfig(ctx context.Context, c client.Client) (*ninja2llb.Config, error) {
 	opts := c.BuildOpts().Opts
 	filename := opts["filename"]
 	if filename == "" {
@@ -101,36 +107,72 @@ func getNinjaConfig(ctx context.Context, c client.Client) (*ninja.Config, error)
 		return nil, errors.Wrapf(err, "failed to read dockerfile")
 	}
 
-	//return ninja.Parse(buildFile)
+	//return ninja2llb.NewParser(buildFile)
 	_ = buildFile
 	// TODO: use an actual ninja parser, in the meantime hardcode a config
-	return &ninja.Config{
-		Vars: ninja.Vars{
-			"cc":     "gcc",
-			"cflags": "-Wall",
-			"obj":    "hello.o",
+
+	r := strings.NewReader(`
+{
+	"vars": {"cc": "gcc", "cflags": "-Wall", "obj": "hello.o"},
+	"rules": {
+		"compile": {"command": "$cc $cflags -c $in -o $out"},
+		"link": {"command": "$cc $in -o $out"}
+	},
+	"builds": [
+		{
+			"rule": "compile",
+			"inputs": ["hello.c"],
+			"outputs": ["$obj"]
 		},
-		Rules: ninja.Rules{
-			"compile": {Command: "$cc $cflags -c $in -o $out"},
-			"link":    {Command: "$cc $in -o $out"},
+		{
+			"rule": "compile",
+			"inputs": ["main.c"],
+			"outputs": ["main.o"]
 		},
-		BuildEdges: ninja.BuildEdges{
-			{
-				RuleName: "compile",
-				Inputs:   []string{"hello.c"},
-				Outputs:  []string{"$obj"},
+		{
+			"rule": "link",
+			"inputs": ["hello.o", "main.o"],
+			"outputs": ["hello"]
+		}
+	],
+	"defaults": ["hello"]
+}`)
+
+	cfg := &ninja2llb.Config{}
+	if err := ninja2llb.Parse(cfg, r); err != nil {
+		return nil, err
+	}
+	return cfg, nil
+
+	/*
+		&ninja.Config{
+			Vars: ninja.Vars{
+				"cc":     "gcc",
+				"cflags": "-Wall",
+				"obj":    "hello.o",
 			},
-			{
-				RuleName: "compile",
-				Inputs:   []string{"main.c"},
-				Outputs:  []string{"main.o"},
+			Rules: ninja.Rules{
+				"compile": {Command: "$cc $cflags -c $in -o $out"},
+				"link":    {Command: "$cc $in -o $out"},
 			},
-			{
-				RuleName: "link",
-				Inputs:   []string{"hello.o", "main.o"},
-				Outputs:  []string{"hello"},
+			BuildEdges: ninja.BuildEdges{
+				{
+					RuleName: "compile",
+					Inputs:   []string{"hello.c"},
+					Outputs:  []string{"$obj"},
+				},
+				{
+					RuleName: "compile",
+					Inputs:   []string{"main.c"},
+					Outputs:  []string{"main.o"},
+				},
+				{
+					RuleName: "link",
+					Inputs:   []string{"hello.o", "main.o"},
+					Outputs:  []string{"hello"},
+				},
 			},
-		},
-		Defaults: []string{"hello"},
-	}, nil
+			Defaults: []string{"hello"},
+		}, nil
+	*/
 }

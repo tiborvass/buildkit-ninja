@@ -3,10 +3,10 @@ package ninja2llb
 import "testing"
 
 func TestExpand(t *testing.T) {
-	variables := vars{"foo": "bar", "foofoo": "baz", "has spaces": "qux", "has": "incorrect substitution"}
+	variables := Vars{"foo": "bar", "foofoo": "baz", "has spaces": "qux", "has": "incorrect substitution"}
 	for _, x := range []struct {
 		name     string
-		vars     vars
+		vars     Vars
 		in       string
 		expected string
 	}{
@@ -54,7 +54,7 @@ func TestExpand(t *testing.T) {
 		},
 	} {
 		t.Run(x.name, func(t *testing.T) {
-			out := expand(x.vars, x.in)
+			out := Expand(x.in, x.vars)
 			if out != x.expected {
 				t.Fatalf("\nexpand(\n\t%#v,\n\t%q\n) = %q (expected %q)", x.vars, x.in, out, x.expected)
 			}

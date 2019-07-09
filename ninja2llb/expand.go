@@ -4,7 +4,7 @@ import (
 	"strings"
 )
 
-func expand(scope scope, s string) string {
+func Expand(s string, getter Getter) string {
 	var sb strings.Builder
 	foundDollar := false
 	inVariableName := false
@@ -17,7 +17,7 @@ func expand(scope scope, s string) string {
 				panic("invalid '$' inside variable name")
 			}
 			if inVariableName {
-				v, _ := scope.get(s[j:i])
+				v, _ := getter.Get(s[j:i])
 				sb.WriteString(v)
 				inVariableName = false
 				j = i
@@ -44,7 +44,7 @@ func expand(scope scope, s string) string {
 			}
 		case '}':
 			if openBrace {
-				v, _ := scope.get(s[j:i])
+				v, _ := getter.Get(s[j:i])
 				sb.WriteString(v)
 				openBrace = false
 				j = i + 1
@@ -57,7 +57,7 @@ func expand(scope scope, s string) string {
 					ch == '_' {
 					continue
 				}
-				v, _ := scope.get(s[j:i])
+				v, _ := getter.Get(s[j:i])
 				sb.WriteString(v)
 				inVariableName = false
 				j = i
@@ -71,7 +71,7 @@ func expand(scope scope, s string) string {
 		panic("unclosed variable substitution '${'")
 	}
 	if inVariableName {
-		v, _ := scope.get(s[j:])
+		v, _ := getter.Get(s[j:])
 		sb.WriteString(v)
 	} else {
 		sb.WriteString(s[j:])

@@ -76,6 +76,8 @@ type builder struct {
 	rules    map[string]*rule
 	defaults map[*edge]struct{}
 	edges    map[string]*edge
+
+	llb map[*edge]llb.State
 }
 
 func (b *builder) CommandFor(output string) (string, error) {
@@ -96,6 +98,7 @@ func newBuilder(cfg *ninja.Config) (*builder, error) {
 		rules:    make(map[string]*rule, len(cfg.Rules)),
 		edges:    make(map[string]*edge, len(cfg.BuildEdges)),
 		defaults: make(map[*edge]struct{}, len(cfg.Defaults)),
+		llb: make(map[*edge]llb.State, len(cfg.BuildEdges),
 	}
 
 	for bei, be := range cfg.BuildEdges {

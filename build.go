@@ -24,7 +24,9 @@ func Build(ctx context.Context, c client.Client) (*client.Result, error) {
 		return nil, err
 	}
 
-	st, img, err := ninja2llb.Ninja2LLB(cfg)
+	src := llb.Local("context")
+	
+	st, img, err := ninja2llb.Ninja2LLB(cfg, src)
 	if err != nil {
 		return nil, err
 	}

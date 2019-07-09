@@ -43,17 +43,6 @@ func (c *converter) addEdge(be *BuildEdge) error {
 		st, ok := c.outs[in]
 		prefixedIn := filepath.Join(srcPrefix, in)
 		if ok {
-		edgeloop:
-			for _, e := range c.Builds {
-				for _, out := range e.Outputs {
-					if out == in {
-						if err := c.addEdge(&e); err != nil {
-							return err
-						}
-						break edgeloop
-					}
-				}
-			}
 			_ = r.AddMount(prefixedIn, st, llb.SourcePath(prefixedIn), llb.Readonly)
 		} else {
 			_ = r.AddMount(prefixedIn, c.source, llb.SourcePath(in), llb.Readonly)

@@ -111,6 +111,7 @@ func getNinjaConfig(ctx context.Context, c client.Client) (*ninja2llb.Config, er
 	_ = buildFile
 	// TODO: use an actual ninja parser, in the meantime hardcode a config
 
+	// TODO: we should be able to replace hello.o by $obj in the first build rule.
 	r := strings.NewReader(`
 {
 	"vars": {"cc": "gcc", "cflags": "-Wall", "obj": "hello.o"},
@@ -122,7 +123,7 @@ func getNinjaConfig(ctx context.Context, c client.Client) (*ninja2llb.Config, er
 		{
 			"rule": "compile",
 			"inputs": ["hello.c"],
-			"outputs": ["$obj"]
+			"outputs": ["hello.o"]
 		},
 		{
 			"rule": "compile",

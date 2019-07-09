@@ -3,7 +3,7 @@ package ninja2llb
 import (
 	"errors"
 	"fmt"
-	"os"
+	"path/filepath"
 
 	"github.com/moby/buildkit/client/llb"
 	"github.com/moby/buildkit/util/system"
@@ -26,7 +26,6 @@ type converter struct {
 	builder llb.State
 }
 
-
 func (c *converter) addEdge(be *BuildEdge) error {
 	rule, ok := c.Rules[be.Rule]
 	if !ok {
@@ -39,13 +38,12 @@ func (c *converter) addEdge(be *BuildEdge) error {
 	}
 	cmd = Expand(cmd, scope)
 
-	fmt.Fprintln(os.Stderr, "totodebug", cmd)
-
-	r := c.builder.Run(llb.Args([]string{"sh", "-c", cmd}))
+	r := c.builder.Run(llb.Args([]string{"sh", "-c", cmd}), llb.Dir(srcPrefix))
 	for _, in := range be.Inputs {
 		st, ok := c.outs[in]
+		prefixedIn := filepath.Join(srcPrefix, in)
 		if ok {
-edgeloop:
+		edgeloop:
 			for _, e := range c.Builds {
 				for _, out := range e.Outputs {
 					if out == in {
@@ -56,9 +54,9 @@ edgeloop:
 					}
 				}
 			}
-			_ = r.AddMount(srcPrefix, st, llb.SourcePath(in))
+			_ = r.AddMount(prefixedIn, st, llb.SourcePath(prefixedIn), llb.Readonly)
 		} else {
-			_ = r.AddMount(srcPrefix, c.source, llb.SourcePath(in))
+			_ = r.AddMount(prefixedIn, c.source, llb.SourcePath(in), llb.Readonly)
 		}
 	}
 	for _, out := range be.Outputs {

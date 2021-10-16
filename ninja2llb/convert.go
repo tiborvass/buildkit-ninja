@@ -3,6 +3,7 @@ package ninja2llb
 import (
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/moby/buildkit/client/llb"
@@ -22,11 +23,13 @@ type converter struct {
 	outs     map[string]llb.State
 	defaults []llb.State
 
-	source  llb.State
-	builder llb.State
+	source      llb.State
+	builder     llb.State
+	ignoreCache bool
 }
 
 func (c *converter) addEdge(be *BuildEdge) error {
+	fmt.Fprintln(os.Stderr, "totodebug addEdge ", be)
 	rule, ok := c.Rules[be.Rule]
 	if !ok {
 		return fmt.Errorf("rule %q referenced by %s not found", be.Rule, be)
@@ -38,24 +41,19 @@ func (c *converter) addEdge(be *BuildEdge) error {
 	}
 	cmd = Expand(cmd, scope)
 
-	r := c.builder.Run(llb.Args([]string{"sh", "-c", cmd}), llb.Dir(srcPrefix))
+	runOpts := []llb.RunOption{llb.Args([]string{"sh", "-c", cmd}), llb.Dir(srcPrefix)}
+	if c.ignoreCache {
+		runOpts = append(runOpts, llb.IgnoreCache)
+	}
+	r := c.builder.Run(runOpts...)
 	for _, in := range be.Inputs {
 		st, ok := c.outs[in]
 		prefixedIn := filepath.Join(srcPrefix, in)
 		if ok {
-		edgeloop:
-			for _, e := range c.Builds {
-				for _, out := range e.Outputs {
-					if out == in {
-						if err := c.addEdge(&e); err != nil {
-							return err
-						}
-						break edgeloop
-					}
-				}
-			}
+			fmt.Fprintln(os.Stderr, "totodebug prefixed", prefixedIn, c.ignoreCache)
 			_ = r.AddMount(prefixedIn, st, llb.SourcePath(prefixedIn), llb.Readonly)
 		} else {
+			fmt.Fprintln(os.Stderr, "totodebug", in, c.ignoreCache)
 			_ = r.AddMount(prefixedIn, c.source, llb.SourcePath(in), llb.Readonly)
 		}
 	}
@@ -66,6 +64,23 @@ func (c *converter) addEdge(be *BuildEdge) error {
 }
 
 func (c *converter) Convert() (llb.State, error) {
+
+	for _, e := range c.Builds {
+		if err := c.addEdge(&e); err != nil {
+			return llb.State{}, err
+		}
+		/*
+		for _, out := range e.Outputs {
+			if out == in {
+				if err := c.addEdge(&e); err != nil {
+					return err
+				}
+				break edgeloop
+			}
+		}
+		*/
+	}
+
 defaults:
 	for _, def := range c.Defaults {
 		// more likely to be closer to the last build edges
@@ -73,9 +88,11 @@ defaults:
 			e := c.Builds[i]
 			for _, out := range e.Outputs {
 				if out == def {
+					/*
 					if err := c.addEdge(&e); err != nil {
 						return llb.State{}, err
 					}
+					*/
 					st, ok := c.outs[out]
 					if !ok {
 						panic(fmt.Errorf("expected to find output %q", out))
@@ -88,6 +105,7 @@ defaults:
 	}
 
 	if len(c.defaults) == 1 {
+		fmt.Fprintf(os.Stderr, "totodebug default %#v\n", debugJSON(c.defaults[0]))
 		return c.defaults[0], nil
 	}
 
@@ -99,13 +117,14 @@ defaults:
 	*/
 }
 
-func Ninja2LLB(cfg *Config, src, builder llb.State) (llb.State, *v1.Image, error) {
+func Ninja2LLB(cfg *Config, src, builder llb.State, ignoreCache bool) (llb.State, *v1.Image, error) {
 
 	c := &converter{
-		Config:  cfg,
-		outs:    make(map[string]llb.State),
-		source:  src,
-		builder: builder,
+		Config:      cfg,
+		outs:        make(map[string]llb.State),
+		source:      src,
+		builder:     builder,
+		ignoreCache: ignoreCache,
 	}
 
 	st, err := c.Convert()

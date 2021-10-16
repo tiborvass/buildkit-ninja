@@ -19,6 +19,10 @@ const (
 )
 
 func Build(ctx context.Context, c client.Client) (*client.Result, error) {
+	opts := c.BuildOpts().Opts
+
+	_, ignoreCache := opts["no-cache"]
+
 	cfg, err := getNinjaConfig(ctx, c)
 	if err != nil {
 		return nil, err
@@ -30,7 +34,7 @@ func Build(ctx context.Context, c client.Client) (*client.Result, error) {
 		llb.WithCustomName("[internal] load build context"),
 	)
 
-	st, img, err := ninja2llb.Ninja2LLB(cfg, src, llb.Image("gcc"))
+	st, img, err := ninja2llb.Ninja2LLB(cfg, src, llb.Image("gcc"), ignoreCache)
 	if err != nil {
 		return nil, err
 	}
@@ -63,8 +67,8 @@ func Build(ctx context.Context, c client.Client) (*client.Result, error) {
 }
 
 func getNinjaConfig(ctx context.Context, c client.Client) (*ninja2llb.Config, error) {
-	opts := c.BuildOpts().Opts
-	filename := opts["filename"]
+	opts := c.BuildOpts()
+	filename := opts.Opts["filename"]
 	if filename == "" {
 		filename = defaultBuildNinjaFilename
 	}
@@ -76,7 +80,7 @@ func getNinjaConfig(ctx context.Context, c client.Client) (*ninja2llb.Config, er
 
 	src := llb.Local("dockerfile",
 		llb.IncludePatterns([]string{filename}),
-		llb.SessionID(c.BuildOpts().SessionID),
+		llb.SessionID(opts.SessionID),
 		llb.SharedKeyHint(defaultBuildNinjaFilename),
 		llb.WithCustomName("[internal] "+name),
 	)
